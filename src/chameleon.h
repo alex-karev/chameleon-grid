@@ -23,15 +23,55 @@ public:
     //! Get chunk size
     Vector3 get_chunk_size();
 
+    //! Add new empty chunk, return its id
+    int add_chunk(Vector3 index);
+    //! Remove chunk (mark it for rewrite)
+    void remove_chunk(int id);
+    //! Count active chunks
+    int count_chunks();
+    //! Count all chunks cached in memory
+    int count_chunks_mem();
+    /*! 
+    * Optimize memory by removing chunks marked for rewrite. 
+    * WARNING: It will also change ids of existing chunks
+    */
+    void optimize_chunks();
+    //! Find chunk by Vector3 index and return it's id. Returns -1 if not found
+    int get_chunk_id(Vector3 index);
+    //! Get Vector3 index of a chunk
+    Vector3 get_chunk_index(int id);
+
 private:
+    // Chunk structure
+    struct Chunk {
+        int index[3];
+        std::vector<int> values;
+        std::vector<int> mask;
+        int rewrite;
+    };
+
+    // Chunk storage
+    std::vector<Chunk> chunks;
+    // Chunk number
+    int chunk_number;
+
     // Size of one chunk
-    int chunk_size[3] = {10,10,10};
+    int chunk_size[3];
+
+    // Number of voxels in one chunk
+    int voxel_number;
+    
+    // Default size of one chunk
+    const int DEFAULT_CHUNK_SIZE[3] = {10,10,10};
+
+    // Useful when using arrays instead of vectors
+    enum {X,Y,Z};
 
     /* 
-    Precomputed edge table
-    This saves a bit of time when computing the centroid of each boundary cell
-    See https://github.com/mikolalysenko/mikolalysenko.github.com/blob/master/Isosurface/js/surfacenets.js 
-    for original code that generates it
+    * Precomputed edge table
+    * This saves a bit of time when computing the centroid of each boundary cell
+    * See https://github.com/mikolalysenko/mikolalysenko.github.com/blob/master/Isosurface/js/surfacenets.js 
+    * for original code that generates it
     */
     const int CUBE_EDGES[24] = {
         0, 1, 0, 2, 0, 4, 1, 3, 
@@ -56,7 +96,6 @@ private:
         976,  983,  969,  974,  946,  949,  939,  940,  888,  895,  865,  870,  794,  797,  771,  772, 
         212,  211,  205,  202,  182,  177,  175,  168,  124,  123,  101,  98,   30,   25,   7,    0
     };
-
 };
 
 }
