@@ -14,17 +14,14 @@ protected:
 public:
     ChameleonGrid();
     ~ChameleonGrid();
-
-    //! When added to scene
-    void _ready();
     
     //! Set chunk size
-    void set_chunk_size(const Vector3 size);
+    void set_chunk_size(const Vector3i size);
     //! Get chunk size
-    Vector3 get_chunk_size();
+    Vector3i get_chunk_size();
 
     //! Add new empty chunk, return its id
-    int add_chunk(Vector3 index);
+    int add_chunk(Vector3i index);
     //! Remove chunk (mark it for rewrite)
     void remove_chunk(int id);
     //! Count active chunks
@@ -36,10 +33,23 @@ public:
     * WARNING: It will also change ids of existing chunks
     */
     void optimize_chunks();
-    //! Find chunk by Vector3 index and return it's id. Returns -1 if not found
-    int get_chunk_id(Vector3 index);
-    //! Get Vector3 index of a chunk
-    Vector3 get_chunk_index(int id);
+    //! Find chunk by Vector3i index and return it's id. Returns -1 if not found
+    int get_chunk_id(Vector3i index);
+    //! Get Vector3i index of a chunk
+    Vector3i get_chunk_index(int id);
+    
+    //! Get voxel by global position. Returns -1 if chunk is not loaded
+    int get_voxel(Vector3i position);
+    //! Set voxel by global position. Does nothing if chunk is not loaded
+    void set_voxel(Vector3i position, int value);
+    //! Get voxel in specified chunk (fast). Chunk id and voxel id are required
+    int get_voxel_fast(int chunk_id, int voxel_id);
+    //! Set voxel in specified chunk (fast). Chunk id and voxel id are required
+    void set_voxel_fast(int chunk_id, int voxel_id, int value);
+    //! Get chunk id in voxel position. Returns -1 if chunk is not loaded
+    int get_voxel_chunk(Vector3i position);
+    //! Get voxel id inside its chunk.
+    int get_voxel_id(Vector3i position);
 
 private:
     // Chunk structure
@@ -57,9 +67,6 @@ private:
 
     // Size of one chunk
     int chunk_size[3];
-
-    // Number of voxels in one chunk
-    int voxel_number;
     
     // Default size of one chunk
     const int DEFAULT_CHUNK_SIZE[3] = {10,10,10};
