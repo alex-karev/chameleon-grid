@@ -15,13 +15,11 @@ func _ready():
 	for x in range(1, chunk_size.x-1):
 		for y in range(1, chunk_size.y-1):
 			for z in range(1, chunk_size.z-1):
-				var index: int = x * chunk_size.y * chunk_size.z + y * chunk_size.z + z
-				if (noise.get_noise_3d(x,y,z)+1)/2 > y/chunk_size.y:
-					if z < chunk_size.z/3:
-						set_voxel_fast(chunk, index, 2)
-					elif z < chunk_size.z/1.5:
-						set_voxel_fast(chunk, index, 1)
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-	pass
+				var index: int = z * chunk_size.x * chunk_size.y + y * chunk_size.x + x
+				if noise.get_noise_3d(x,y,z) < 0:
+					set_voxel_fast(chunk, index, 0)
+	update_chunk(chunk)
+	
+func _input(event):
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		_ready()

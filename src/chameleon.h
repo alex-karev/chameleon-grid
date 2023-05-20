@@ -1,6 +1,10 @@
 #ifndef CHAMELEONGRID_H
 #define CHAMELEONGRID_H
 
+#include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/surface_tool.hpp>
+#include <godot_cpp/classes/mesh.hpp>
+#include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/node3d.hpp>
 
 namespace godot {
@@ -37,7 +41,8 @@ public:
     int get_chunk_id(Vector3i index);
     //! Get Vector3i index of a chunk
     Vector3i get_chunk_index(int id);
-    
+    //! Update mesh of a chunk
+    void update_chunk(int id);
     //! Get voxel by global position. Returns -1 if chunk is not loaded
     int get_voxel(Vector3i position);
     //! Set voxel by global position. Does nothing if chunk is not loaded
@@ -57,6 +62,7 @@ private:
         int index[3];
         std::vector<int> values;
         std::vector<int> mask;
+        MeshInstance3D * mesh_instance;
         int rewrite;
     };
 
@@ -80,12 +86,12 @@ private:
     * See https://github.com/mikolalysenko/mikolalysenko.github.com/blob/master/Isosurface/js/surfacenets.js 
     * for original code that generates it
     */
-    const int CUBE_EDGES[24] = {
+    int CUBE_EDGES[24] = {
         0, 1, 0, 2, 0, 4, 1, 3, 
         1, 5, 2, 3, 2, 6, 3, 7, 
         4, 5, 4, 6, 5, 7, 6, 7
     };
-    const int EDGE_TABLE[256] = {
+    int EDGE_TABLE[256] = {
         0,    7,    25,   30,   98,   101,  123,  124,  168,  175,  177,  182,  202,  205,  211,  212, 
         772,  771,  797,  794,  870,  865,  895,  888,  940,  939,  949,  946,  974,  969,  983,  976, 
         1296, 1303, 1289, 1294, 1394, 1397, 1387, 1388, 1464, 1471, 1441, 1446, 1498, 1501, 1475, 1476, 
@@ -103,6 +109,8 @@ private:
         976,  983,  969,  974,  946,  949,  939,  940,  888,  895,  865,  870,  794,  797,  771,  772, 
         212,  211,  205,  202,  182,  177,  175,  168,  124,  123,  101,  98,   30,   25,   7,    0
     };
+    // Remaps vertex indices from 1 quad into 2 trigs
+    const int QUAD_TO_TRIGS[6] = {1,3,0,2,3,1};
 };
 
 }

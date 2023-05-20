@@ -1,8 +1,34 @@
-[gd_scene load_steps=2 format=3 uid="uid://dgt22sux7f2ew"]
+[gd_scene load_steps=6 format=3 uid="uid://dgt22sux7f2ew"]
 
 [ext_resource type="Script" path="res://ChameleonGridTest.gd" id="1_dqbnw"]
+[ext_resource type="Script" path="res://CameraHandle.gd" id="2_hk55n"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_mviuo"]
+
+[sub_resource type="Sky" id="Sky_bol64"]
+sky_material = SubResource("ProceduralSkyMaterial_mviuo")
+
+[sub_resource type="Environment" id="Environment_wslxk"]
+background_mode = 2
+sky = SubResource("Sky_bol64")
 
 [node name="Node3D" type="Node3D"]
 
 [node name="ChameleonGrid" type="ChameleonGrid" parent="."]
+chunk_size = Vector3i(30, 30, 30)
 script = ExtResource("1_dqbnw")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_wslxk")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.694784, -0.53264, 0.483291, 0, 0.671966, 0.740582, -0.719219, -0.514544, 0.466871, 0, 0, 0)
+shadow_enabled = true
+
+[node name="CameraHandle" type="Node3D" parent="."]
+script = ExtResource("2_hk55n")
+initial_zoom = 100.0
+
+[node name="Camera3D" type="Camera3D" parent="CameraHandle"]
+transform = Transform3D(1, 0, 0, 0, 0.982287, 0.187381, 0, -0.187381, 0.982287, 0, 7.98896, 9.56989)
+current = true
