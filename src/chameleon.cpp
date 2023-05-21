@@ -134,7 +134,6 @@ void ChameleonGrid::update_chunk(int id) {
     int buf_no = 1;
     Vector3 pos = Vector3(0,0,0);
 	double smoothness = DEFAULT_VOXEL.smoothness;
-    int value = -1;
 
     // Internal buffer
     std::vector<int> buffer;
@@ -152,10 +151,7 @@ void ChameleonGrid::update_chunk(int id) {
         for (int x = 0; x < chunk_size[X]-1; ++x, ++n, ++m) {
             // Set voxel parameters  
             pos = Vector3(x,y,z);
-            value = get_voxel_fast(id, n);
             smoothness = DEFAULT_VOXEL.smoothness;
-            if (value >= 0)
-                smoothness = voxels[value].smoothness;
             // Read in 8 field values around this vertex and store them in an array
             // Also calculate 8-bit mask, like in marching cubes, so we can speed up sign checks later
             int mask = 0, g = 0, idx = n;
@@ -165,12 +161,12 @@ void ChameleonGrid::update_chunk(int id) {
                 int p = get_voxel_fast(id, idx);
                 double p_smoothness = DEFAULT_VOXEL.smoothness;
                 if (p < 0) {
-                    grid[g] = 0;
+                    grid[g] = p;
                     mask |= 1<<g;
                 }
                 else {
                     p_smoothness = voxels[p].smoothness;
-                    grid[g] = 1;
+                    grid[g] = p;
                     mask |= 0;
                 }
                 if (p_smoothness < smoothness)
@@ -194,7 +190,9 @@ void ChameleonGrid::update_chunk(int id) {
                 int e0 = CUBE_EDGES[ i<<1 ]; // Unpack vertices
                 int e1 = CUBE_EDGES[(i<<1)+1];
                 // TODO: REFACTORING NEEDED
-                int t = grid[e0]-grid[e1]; // Compute point of intersection
+                int g0 = grid[e0] > 0 ? 1 : 0;
+                int g1 = grid[e1] > 0 ? 1 : 0;
+                int t = g0-g1; // Compute point of intersection
                 // Interpolate vertices and add up intersections (this can be done without multiplying)
                 for (int j = 0, k = 1; j < 3; ++j, k <<= 1) {
                     int a = e0 & k;
@@ -224,32 +222,56 @@ void ChameleonGrid::update_chunk(int id) {
                 // Otherwise, look up adjacent edges in buffer
                 int du = R[iu];
                 int dv = R[iv];
+                // TODO: REFACTORING
                 // Remember to flip orientation depending on the sign of the corner.
+                int value = 0;
                 if (mask & 1) {
+                    if (i == 0) value = grid[1];
+                    else if (i==1) value = grid[2];
+                    else value = grid[4];
                     faces.push_back(buffer[m]);
                     faces.push_back(buffer[m-du]);
                     faces.push_back(buffer[m-du-dv]);
                     faces.push_back(buffer[m-dv]);
                 }
                 else {
+                    value = grid[0];
                     faces.push_back(buffer[m]);
                     faces.push_back(buffer[m-dv]);
                     faces.push_back(buffer[m-du-dv]);
                     faces.push_back(buffer[m-du]);
                 }
+                values.push_back(value);
             }
         }
     }
-    SurfaceTool st;
-	st.begin(Mesh::PRIMITIVE_TRIANGLES);
-    for (int i = 0; i < faces.size()/4; i++)
-    for (int j = 0; j < 6; j++) {
-		st.set_smooth_group(-1);
-        st.add_vertex(vertices[faces[i*4+QUAD_TO_TRIGS[j]]]);
+    // TODO: REFACTORING
+    Ref<ArrayMesh> mesh;
+    std::vector<SurfaceTool> st;
+    st.resize(materials.size());
+    std::vector<int> stn;
+    stn.resize(materials.size(), 0);
+    for (int i = 0; i < st.size(); i++)
+        st[i].begin(Mesh::PRIMITIVE_TRIANGLES);
+    for (int i = 0; i < values.size(); i++) {
+        int mat = voxels[values[i]].material;
+        stn[mat] += 1;
+        for (int k = 0; k < 6; k++) {
+            st[mat].set_smooth_group(-1);
+            st[mat].add_vertex(vertices[faces[i*4+QUAD_TO_TRIGS[k]]]);
+        }
     }
-	st.generate_normals();
-	st.index();
-    chunks[id].mesh_instance->set_mesh(st.commit());
+    int surface = 0;
+    for(int i = 0; i < st.size(); i++) {
+        if (stn[i] > 0) {
+            st[i].generate_normals();
+            st[i].index();
+            mesh = st[i].commit(mesh);
+            mesh->surface_set_material(surface, materials[i].material);
+            surface += 1;
+        }
+    }
+    chunks[id].mesh_instance->set_mesh(mesh);
 }
 
 int ChameleonGrid::get_voxel(Vector3i position) {

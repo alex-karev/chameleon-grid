@@ -14,6 +14,9 @@ func _ready():
 	# Prepare
 	position = -chunk_size/2
 	randomize()
+	generate()
+	
+func generate():
 	# Set noise
 	var noise1: FastNoiseLite = FastNoiseLite.new()
 	noise1.frequency = 0.025
@@ -38,4 +41,4 @@ func _ready():
 	
 func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		_ready()
+		generate()
