@@ -15,7 +15,7 @@ sky = SubResource("Sky_bol64")
 [node name="Node3D" type="Node3D"]
 
 [node name="ChameleonGrid" type="ChameleonGrid" parent="."]
-chunk_size = Vector3i(30, 30, 30)
+chunk_size = Vector3i(50, 50, 50)
 script = ExtResource("1_dqbnw")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -23,6 +23,10 @@ environment = SubResource("Environment_wslxk")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.694784, -0.53264, 0.483291, 0, 0.671966, 0.740582, -0.719219, -0.514544, 0.466871, 0, 0, 0)
+shadow_enabled = true
+
+[node name="DirectionalLight3D2" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.696176, -0.531642, 0.482385, -1.56086e-08, 0.671967, 0.740582, -0.717871, 0.515575, -0.467807, 0, 0, 0)
 shadow_enabled = true
 
 [node name="CameraHandle" type="Node3D" parent="."]

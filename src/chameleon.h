@@ -2,6 +2,8 @@
 #define CHAMELEONGRID_H
 
 #include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/material.hpp>
+#include <godot_cpp/classes/standard_material3d.hpp>
 #include <godot_cpp/classes/surface_tool.hpp>
 #include <godot_cpp/classes/mesh.hpp>
 #include <godot_cpp/classes/array_mesh.hpp>
@@ -55,10 +57,33 @@ public:
     int get_voxel_chunk(Vector3i position);
     //! Get voxel id inside its chunk.
     int get_voxel_id(Vector3i position);
+    
+    //! Add new voxel material
+    void add_material(Ref<Material> material, Vector2i atlas_size);
+    //! Add new voxel type
+    void add_voxel(int material, TypedArray<int> atlas_index, double smoothness, bool smooth_shading);
 
 private:
+    // Material structure
+    struct ChameleonMaterial {
+        Ref<Material> material;
+        int atlas_size[2] = {1,1};
+    };
+    // Material database
+    std::vector<ChameleonMaterial> materials;
+    
+    // Voxel structure
+    struct ChameleonVoxel {
+        int material = -1;
+        int atlas_index[6] = {0,0,0,0,0,0};
+        double smoothness = 1.0;
+        int smooth_shading = 1;
+    };
+    // Voxel database
+    std::vector<ChameleonVoxel> voxels;
+
     // Chunk structure
-    struct Chunk {
+    struct ChameleonChunk {
         int index[3];
         std::vector<int> values;
         std::vector<int> mask;
@@ -67,7 +92,7 @@ private:
     };
 
     // Chunk storage
-    std::vector<Chunk> chunks;
+    std::vector<ChameleonChunk> chunks;
     // Chunk number
     int chunk_number;
 
@@ -76,6 +101,12 @@ private:
     
     // Default size of one chunk
     const int DEFAULT_CHUNK_SIZE[3] = {10,10,10};
+
+    // Default voxel to be used when voxel id is invalid
+    const ChameleonVoxel DEFAULT_VOXEL;
+
+    // Default material to be used with default voxel
+    ChameleonMaterial DEFAULT_MATERIAL;
 
     // Useful when using arrays instead of vectors
     enum {X,Y,Z};

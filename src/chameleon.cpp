@@ -22,6 +22,8 @@ void ChameleonGrid::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_voxel_fast",   "chunk_id", "voxel_id", "value"), &ChameleonGrid::set_voxel_fast);
     ClassDB::bind_method(D_METHOD("get_voxel_chunk",  "position"), &ChameleonGrid::get_voxel_chunk);
     ClassDB::bind_method(D_METHOD("get_voxel_id",     "position"), &ChameleonGrid::get_voxel_id);
+    ClassDB::bind_method(D_METHOD("add_material",     "material", "atlas_size"), &ChameleonGrid::add_material);
+    ClassDB::bind_method(D_METHOD("add_voxel",        "material", "atlas_index[6]", "smoothness", "smooth_shading"), &ChameleonGrid::add_voxel);
 }
 
 ChameleonGrid::ChameleonGrid() {
@@ -29,7 +31,7 @@ ChameleonGrid::ChameleonGrid() {
     for (int i = 0; i < 3; i++)
         chunk_size[i] = DEFAULT_CHUNK_SIZE[i];
     chunk_number = 0;
-
+    //DEFAULT_MATERIAL.material = Ref<StandardMaterial3D>();
 }
 
 ChameleonGrid::~ChameleonGrid() {
@@ -57,11 +59,11 @@ int ChameleonGrid::add_chunk(Vector3i index) {
             id = i;
     // Else create a new chunk
     if (id == -1) {
-        chunks.push_back(Chunk());
+        chunks.push_back(ChameleonChunk());
         id = chunks.size()-1;
     }
     // Reset chunk values
-    Chunk * chunk = &chunks[id];
+    ChameleonChunk * chunk = &chunks[id];
     for (int i = 0; i < 3; i++)
         chunk->index[i] = index[i];
     int voxel_number = chunk_size[Z]*chunk_size[Y]*chunk_size[Z];
@@ -114,7 +116,7 @@ int ChameleonGrid::get_chunk_id(Vector3i index) {
     return -1;
 }
 Vector3i ChameleonGrid::get_chunk_index(int id) {
-    Chunk * chunk = &chunks[id];
+    ChameleonChunk * chunk = &chunks[id];
     return Vector3i(chunk->index[X], chunk->index[Y], chunk->index[Z]);
 }
 
@@ -125,12 +127,15 @@ void ChameleonGrid::update_chunk(int id) {
     // Define varaibles needed for mesh generation
     std::vector<Vector3> vertices;
     std::vector<int> faces;
+    std::vector<int> values;
     int n = 0;
     int R[3] = {1, chunk_size[X]+1, (chunk_size[X]+1)*(chunk_size[Y]+1)};
     int grid[8] = {0,0,0,0,0,0,0,0};
     int buf_no = 1;
     Vector3 pos = Vector3(0,0,0);
-	
+	double smoothness = DEFAULT_VOXEL.smoothness;
+    int value = -1;
+
     // Internal buffer
     std::vector<int> buffer;
     buffer.resize(R[Z] * 2, 0);
@@ -145,7 +150,12 @@ void ChameleonGrid::update_chunk(int id) {
         int m = 1 + (chunk_size[X]+1) * (1 + buf_no * (chunk_size[Y]+1));
         for (int y = 0; y < chunk_size[Y]-1; ++y, ++n, m+=2)
         for (int x = 0; x < chunk_size[X]-1; ++x, ++n, ++m) {
+            // Set voxel parameters  
             pos = Vector3(x,y,z);
+            value = get_voxel_fast(id, n);
+            smoothness = DEFAULT_VOXEL.smoothness;
+            if (value >= 0)
+                smoothness = voxels[value].smoothness;
             // Read in 8 field values around this vertex and store them in an array
             // Also calculate 8-bit mask, like in marching cubes, so we can speed up sign checks later
             int mask = 0, g = 0, idx = n;
@@ -153,14 +163,18 @@ void ChameleonGrid::update_chunk(int id) {
             for (int j = 0; j < 2; j++, idx += chunk_size[X]-2)
             for (int k = 0; k < 2; k++, ++g, ++idx) {
                 int p = get_voxel_fast(id, idx);
+                double p_smoothness = DEFAULT_VOXEL.smoothness;
                 if (p < 0) {
                     grid[g] = 0;
                     mask |= 1<<g;
                 }
                 else {
+                    p_smoothness = voxels[p].smoothness;
                     grid[g] = 1;
                     mask |= 0;
                 }
+                if (p_smoothness < smoothness)
+                    smoothness = p_smoothness;
             }
             // Check for early termination if cell does not intersect boundary
             if (mask == 0 || mask == 0xff)
@@ -180,20 +194,19 @@ void ChameleonGrid::update_chunk(int id) {
                 int e0 = CUBE_EDGES[ i<<1 ]; // Unpack vertices
                 int e1 = CUBE_EDGES[(i<<1)+1];
                 // TODO: REFACTORING NEEDED
-                int t = std::max(grid[e0]-grid[e1], 0); // Compute point of intersection
+                int t = grid[e0]-grid[e1]; // Compute point of intersection
                 // Interpolate vertices and add up intersections (this can be done without multiplying)
                 for (int j = 0, k = 1; j < 3; ++j, k <<= 1) {
                     int a = e0 & k;
                     int b = e1 & k;
                     if (a != b)
-                        v[j] += a ? 1.0 - t : t;
+                        v[j] += a ? t/2 : -t/2;
                     else
-                        v[j] += a ? 1.0 : 0;
+                        v[j] += a ? 0.5 : -0.5;
                 }
             }
             // Now we just average the edge intersections and add them to coordinate
-            v *= 1.0 / e_count;
-            v += pos;
+            v = pos + v * (1.0 / e_count) * smoothness;
             // Add vertex to buffer, store pointer to vertex index in buffer
             buffer[m] = vertices.size();
             vertices.push_back(v);
@@ -267,4 +280,21 @@ int ChameleonGrid::get_voxel_id(Vector3i position) {
     return (position.x % chunk_size[X]) * chunk_size[Y] * chunk_size[Z] 
          + (position.y % chunk_size[Y]) * chunk_size[Z] 
          + (position.z % chunk_size[Z]);
+}
+void ChameleonGrid::add_material(Ref<Material> material, Vector2i atlas_size) {
+    ChameleonMaterial mat;
+    mat.material = material;
+    mat.atlas_size[0] = atlas_size.x;
+    mat.atlas_size[1] = atlas_size.y;
+    materials.push_back(mat);
+}
+void ChameleonGrid::add_voxel(int material, TypedArray<int> atlas_index, double smoothness, bool smooth_shading) {
+    ERR_FAIL_COND_MSG(atlas_index.size() != 6, "Invalid atlas index provided. Should be an array of 6 integers for each side of the voxel");
+    ChameleonVoxel voxel;
+    voxel.material = material;
+    for (int i = 0; i < 6; i++)
+        voxel.atlas_index[i] = atlas_index[i];
+    voxel.smoothness = smoothness;
+    voxel.smooth_shading = smooth_shading;
+    voxels.push_back(voxel);
 }
