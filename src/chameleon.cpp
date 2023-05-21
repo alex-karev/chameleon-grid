@@ -255,9 +255,13 @@ void ChameleonGrid::update_chunk(int id) {
         st[i].begin(Mesh::PRIMITIVE_TRIANGLES);
     for (int i = 0; i < values.size(); i++) {
         int mat = voxels[values[i]].material;
+        int shade_smooth = voxels[values[i]].smooth_shading;
         stn[mat] += 1;
         for (int k = 0; k < 6; k++) {
-            st[mat].set_smooth_group(-1);
+            if (shade_smooth)
+                st[mat].set_smooth_group(0);
+            else
+                st[mat].set_smooth_group(-1);
             st[mat].add_vertex(vertices[faces[i*4+QUAD_TO_TRIGS[k]]]);
         }
     }
