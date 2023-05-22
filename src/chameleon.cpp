@@ -190,8 +190,9 @@ void ChameleonGrid::update_chunk_mesh_data(int chunk_id) {
                 for (int j = 0, k = 1; j < 3; ++j, k <<= 1) {
                     int a = e0 & k;
                     int b = e1 & k;
-                    if (a != b)
+                    if (a != b) {
                         v[j] += a ? t/2 : -t/2;
+                    }
                     else
                         v[j] += a ? 0.5 : -0.5;
                 }
@@ -266,6 +267,7 @@ void ChameleonGrid::remesh() {
                     st[mat].set_smooth_group(0);
                 else
                     st[mat].set_smooth_group(-1);
+                st[mat].set_uv(Vector2(CUBE_UV[k*2], CUBE_UV[k*2+1]));
                 Vector3 offset = Vector3(chunk.index[X]*(chunk_size[X]-2), chunk.index[Y]*(chunk_size[Y]-2), chunk.index[Z]*(chunk_size[Z]-2));
                 st[mat].add_vertex(chunk.vertices[v]+offset);
             }

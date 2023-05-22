@@ -153,6 +153,11 @@ private:
     };
     // Remaps vertex indices from 1 quad into 2 trigs
     const int QUAD_TO_TRIGS[6] = {1,3,0,2,3,1};
+    // UV map of triangles in one face
+    int CUBE_UV[12] = {
+        0,0, 1,0, 0,1, 
+        1,0, 1,1, 0,1
+    };
 };
 
 }

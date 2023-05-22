@@ -14,3 +14,8 @@ config/name="ChameleonGrid"
 run/main_scene="res://demo.tscn"
 config/features=PackedStringArray("4.0", "Forward Plus")
 config/icon="res://icon.svg"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+textures/lossless_compression/force_png=true

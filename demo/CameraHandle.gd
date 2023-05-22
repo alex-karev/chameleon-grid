@@ -8,13 +8,6 @@ var axis: Vector2 = Vector2.ZERO
 var mouse_grab: bool = false
 var camera: Camera3D
 
-func _ready():
-	for child in get_children():
-		if child is Camera3D:
-			camera = child
-			break
-	camera.position = camera.basis.z * initial_zoom
-
 func _input(event):
 	axis = Vector2.ZERO
 	if event is InputEventMouseButton \
@@ -23,12 +16,6 @@ func _input(event):
 	elif event is InputEventMouseMotion \
 	and mouse_grab:
 		axis = event.relative
-	elif event is InputEventMouseButton \
-	and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-		camera.position += camera.basis.z*zoom_sensivity
-	elif event is InputEventMouseButton \
-	and event.button_index == MOUSE_BUTTON_WHEEL_UP:
-		camera.position -= camera.basis.z*zoom_sensivity
 
 func _process(delta):
 	if mouse_grab and axis != Vector2.ZERO:
@@ -36,11 +23,15 @@ func _process(delta):
 		rotate(basis.x, -axis.y*delta)
 	axis = Vector2.ZERO
 	if Input.is_key_pressed(KEY_D):
-		rotate_y(delta * key_control_speed)
+		position += basis.x*delta*30
+		#rotate_y(delta * key_control_speed)
 	if Input.is_key_pressed(KEY_A):
-		rotate_y(-delta * key_control_speed)
+		position -= basis.x*delta*30
+		#rotate_y(-delta * key_control_speed)
 	if Input.is_key_pressed(KEY_W):
-		rotate(basis.x, -delta * key_control_speed)
+		position -= basis.z*delta*30
+		#rotate(basis.x, -delta * key_control_speed)
 	if Input.is_key_pressed(KEY_S):
-		rotate(basis.x, delta * key_control_speed)
+		position += basis.z*delta*30
+		#rotate(basis.x, delta * key_control_speed)
 		
