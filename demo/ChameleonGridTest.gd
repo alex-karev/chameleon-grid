@@ -2,15 +2,20 @@ extends ChameleonGrid
 
 @export var grass_material: StandardMaterial3D
 @export var wall_material: StandardMaterial3D
+@export var dirt_material: StandardMaterial3D
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	# Populate databse
 	var mat1 = grass_material # Otherwise it crashes. Might be a Godot API bug
 	var mat2 = wall_material
+	var mat3 = dirt_material
 	add_material(mat1, Vector2i(1,1))
 	add_material(mat2, Vector2i(1,1))
+	add_material(mat3, Vector2i(1,1))
 	add_voxel(0, [0,0,0,0,0,0], 1.0, true)
 	add_voxel(1, [0,0,0,0,0,0], 0.0, false)
+	add_voxel(2, [0,0,0,0,0,0], 0.5, true)
 	# Prepare
 	position = -chunk_size/2
 	randomize()
@@ -24,6 +29,9 @@ func generate():
 	var noise2: FastNoiseLite = FastNoiseLite.new()
 	noise2.frequency = 0.025
 	noise2.seed = randi()
+	var noise3: FastNoiseLite = FastNoiseLite.new()
+	noise3.frequency = 0.025
+	noise3.seed = randi()
 	# Generate chunk
 	if count_chunks() == 1:
 		remove_chunk(0)
@@ -32,9 +40,12 @@ func generate():
 		for y in range(1, chunk_size.y-1):
 			for z in range(1, chunk_size.z-1):
 				var index: int = z * chunk_size.x * chunk_size.y + y * chunk_size.x + x
-				if noise1.get_noise_3d(x,y,z) < 0:
+				if (noise1.get_noise_3d(x,y,z)+1)/2*y/chunk_size.y < 0.3:
 					if noise2.get_noise_3d(x,y,z) < 0:
-						set_voxel_fast(chunk, index, 1)
+						if noise3.get_noise_3d(x,y,z) < 0:
+							set_voxel_fast(chunk, index, 1)
+						else:
+							set_voxel_fast(chunk, index, 2)
 					else:
 						set_voxel_fast(chunk, index, 0)
 	update_chunk(chunk)
