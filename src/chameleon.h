@@ -63,7 +63,16 @@ public:
     //! Add new voxel type
     void add_voxel(int material, TypedArray<int> atlas_index, double smoothness, bool smooth_shading);
 
+    //! Redraw mesh
+    void remesh();
+
 private:
+    // Mesh instance to store mesh
+    MeshInstance3D * mesh_instance;
+
+    // Generate mesh using surface nets
+    void update_chunk_mesh_data(int chunk_id);
+
     // Material structure
     struct ChameleonMaterial {
         Ref<Material> material;
@@ -87,7 +96,9 @@ private:
         int index[3];
         std::vector<int> values;
         std::vector<int> mask;
-        MeshInstance3D * mesh_instance;
+        std::vector<Vector3> vertices;
+        std::vector<int> faces;
+        std::vector<int> face_values;
         int rewrite;
     };
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://dgt22sux7f2ew"]
+[gd_scene load_steps=10 format=3 uid="uid://dgt22sux7f2ew"]
 
 [ext_resource type="Script" path="res://ChameleonGridTest.gd" id="1_dqbnw"]
 [ext_resource type="Script" path="res://CameraHandle.gd" id="2_hk55n"]
@@ -11,6 +11,8 @@ albedo_color = Color(0.376471, 0.376471, 0.439216, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8unov"]
 albedo_color = Color(0.588235, 0.258824, 0.32549, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_u3uxm"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_mviuo"]
 
@@ -26,11 +28,15 @@ ambient_light_source = 3
 [node name="Node3D" type="Node3D"]
 
 [node name="ChameleonGrid" type="ChameleonGrid" parent="."]
-chunk_size = Vector3i(50, 50, 50)
+chunk_size = Vector3i(15, 50, 15)
 script = ExtResource("1_dqbnw")
 grass_material = SubResource("StandardMaterial3D_d18rj")
 wall_material = SubResource("StandardMaterial3D_qagog")
 dirt_material = SubResource("StandardMaterial3D_8unov")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ChameleonGrid"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+mesh = SubResource("SphereMesh_u3uxm")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_wslxk")
@@ -41,7 +47,6 @@ shadow_enabled = true
 
 [node name="CameraHandle" type="Node3D" parent="."]
 script = ExtResource("2_hk55n")
-initial_zoom = 100.0
 
 [node name="Camera3D" type="Camera3D" parent="CameraHandle"]
 transform = Transform3D(1, 0, 0, 0, 0.982287, 0.187381, 0, -0.187381, 0.982287, 0, 7.98896, 9.56989)

@@ -4,6 +4,10 @@ extends ChameleonGrid
 @export var wall_material: StandardMaterial3D
 @export var dirt_material: StandardMaterial3D
 
+var noise1: FastNoiseLite
+var noise2: FastNoiseLite
+var noise3: FastNoiseLite
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	# Populate databse
@@ -17,35 +21,46 @@ func _ready():
 	add_voxel(1, [0,0,0,0,0,0], 0.0, false)
 	add_voxel(2, [0,0,0,0,0,0], 0.5, true)
 	# Prepare
-	position = -chunk_size/2
+	position = -chunk_size
 	randomize()
-	generate()
-	
-func generate():
 	# Set noise
-	var noise1: FastNoiseLite = FastNoiseLite.new()
+	noise1 = FastNoiseLite.new()
 	noise1.frequency = 0.025
-	noise1.seed = randi()
-	var noise2: FastNoiseLite = FastNoiseLite.new()
+	noise2 = FastNoiseLite.new()
 	noise2.frequency = 0.025
-	noise2.seed = randi()
-	var noise3: FastNoiseLite = FastNoiseLite.new()
+	noise3 = FastNoiseLite.new()
 	noise3.frequency = 0.025
+	generate()
+
+func generate():
+	noise1.seed = randi()
+	noise2.seed = randi()
 	noise3.seed = randi()
 	# Generate chunk
-	if count_chunks() == 1:
+	if count_chunks() != 0:
 		remove_chunk(0)
-	var chunk = add_chunk(Vector3.ZERO)
-	for x in range(1, chunk_size.x-1):
-		for y in range(1, chunk_size.y-1):
-			for z in range(1, chunk_size.z-1):
+		remove_chunk(1)
+		remove_chunk(2)
+		remove_chunk(3)
+	generate_chunk(Vector3.ZERO)
+	generate_chunk(Vector3i(1,0,0))
+	generate_chunk(Vector3i(0,0,1))
+	generate_chunk(Vector3i(1,0,1))
+	remesh()
+
+func generate_chunk(chunk_index: Vector3i):
+	var chunk = add_chunk(chunk_index)
+	for x in chunk_size.x:
+		for y in chunk_size.y:
+			for z in chunk_size.z:
 				var index: int = z * chunk_size.x * chunk_size.y + y * chunk_size.x + x
-				if (noise1.get_noise_3d(x,y,z)+1)/2*y/chunk_size.y < 0.3:
-					if noise2.get_noise_3d(x,y,z) < 0:
-						if noise3.get_noise_3d(x,y,z) < 0:
-							set_voxel_fast(chunk, index, 1)
-						else:
+				var pos = Vector3(x,y,z) + Vector3(chunk_size-Vector3i.ONE*2)*Vector3(chunk_index)
+				if (noise1.get_noise_3dv(pos)+1)/2*y/chunk_size.y < 0.2:
+					if noise2.get_noise_3dv(pos) < 0:
+						if noise3.get_noise_3dv(pos) < 0:
 							set_voxel_fast(chunk, index, 2)
+						else:
+							set_voxel_fast(chunk, index, 1)
 					else:
 						set_voxel_fast(chunk, index, 0)
 	update_chunk(chunk)
