@@ -24,7 +24,6 @@ void ChameleonGrid::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_voxel_id",     "position"), &ChameleonGrid::get_voxel_id);
     ClassDB::bind_method(D_METHOD("add_material",     "material", "atlas_size"), &ChameleonGrid::add_material);
     ClassDB::bind_method(D_METHOD("add_voxel",        "material", "atlas_index[6]", "smoothness", "smooth_shading"), &ChameleonGrid::add_voxel);
-    ClassDB::bind_method(D_METHOD("remesh"            ), &ChameleonGrid::remesh);
 }
 
 ChameleonGrid::ChameleonGrid() {
@@ -76,11 +75,16 @@ int ChameleonGrid::add_chunk(Vector3i index) {
     }
     chunk->rewrite = 0;
     chunk_number += 1;
+    MeshInstance3D mesh_instance;
+    add_child(&mesh_instance);
+    chunk->mesh_instance = (MeshInstance3D*)get_child(get_child_count()-1);
+    mesh_instance.set_position(Vector3(index[X]*(chunk_size[X]-2),index[Y]*(chunk_size[Y]-2),index[Z]*(chunk_size[Z]-2)));
     // Return chunk id
     return id;
 }
 void ChameleonGrid::remove_chunk(int id) {
     // Mark chunk for rewrite and update chunk counter
+    chunks[id].mesh_instance->queue_free();
     chunks[id].rewrite = 1;
     chunk_number -= 1;
 }
@@ -115,18 +119,24 @@ Vector3i ChameleonGrid::get_chunk_index(int id) {
     return Vector3i(chunk->index[X], chunk->index[Y], chunk->index[Z]);
 }
 
-void ChameleonGrid::update_chunk_mesh_data(int chunk_id) {
+void ChameleonGrid::update_chunk(int chunk_id) {
+   // Ignore unexisting chunks
+    if (chunk_id >= chunks.size() || chunks[chunk_id].rewrite)
+        return;
     // Define varaibles needed for mesh generation
     ChameleonChunk * chunk = &chunks[chunk_id];
-    chunk->faces.clear();
-    chunk->vertices.clear();
-    chunk->face_values.clear();
+    std::vector<Vector3> vertices;
+    std::vector<int> faces;
+    std::vector<int> values;
+    std::vector<Vector3> normals;
+    std::vector<int> rotate_uv;
     int n = 0;
     int R[3] = {1, chunk_size[X]+1, (chunk_size[X]+1)*(chunk_size[Y]+1)};
     int grid[8] = {0,0,0,0,0,0,0,0};
     int buf_no = 1;
     Vector3 pos = Vector3(0,0,0);
 	double smoothness = DEFAULT_VOXEL.smoothness;
+    Vector3 face_normals[6];
 
     // Internal buffer
     std::vector<int> buffer;
@@ -200,8 +210,8 @@ void ChameleonGrid::update_chunk_mesh_data(int chunk_id) {
             // Now we just average the edge intersections and add them to coordinate
             v = pos + v * (1.0 / e_count) * smoothness;
             // Add vertex to buffer, store pointer to vertex index in buffer
-            buffer[m] = chunk->vertices.size();
-            chunk->vertices.push_back(v);
+            buffer[m] = vertices.size();
+            vertices.push_back(v);
             // Skipt the first row
             if (x==0 || y==0 || z==0)
                 continue;
@@ -216,6 +226,8 @@ void ChameleonGrid::update_chunk_mesh_data(int chunk_id) {
                 // If we are on a boundary, skip it
                 if (pos[iu] == 0 || pos[iv] == 0)
                     continue;
+                // Rotate uvs in certain cases
+                int rotate = 0;
                 // Otherwise, look up adjacent edges in buffer
                 int du = R[iu];
                 int dv = R[iv];
@@ -226,26 +238,27 @@ void ChameleonGrid::update_chunk_mesh_data(int chunk_id) {
                     if (i == 0) value = grid[1];
                     else if (i==1) value = grid[2];
                     else value = grid[4];
-                    chunk->faces.push_back(buffer[m]);
-                    chunk->faces.push_back(buffer[m-du]);
-                    chunk->faces.push_back(buffer[m-du-dv]);
-                    chunk->faces.push_back(buffer[m-dv]);
+                    if (i == 0) rotate = 1;
+                    faces.push_back(buffer[m]);
+                    faces.push_back(buffer[m-du]);
+                    faces.push_back(buffer[m-du-dv]);
+                    faces.push_back(buffer[m-dv]);
                 }
                 else {
                     value = grid[0];
-                    chunk->faces.push_back(buffer[m]);
-                    chunk->faces.push_back(buffer[m-dv]);
-                    chunk->faces.push_back(buffer[m-du-dv]);
-                    chunk->faces.push_back(buffer[m-du]);
+                    if (i == 2) rotate = 1;
+                    else if (i == 1) rotate = 1;
+                    faces.push_back(buffer[m]);
+                    faces.push_back(buffer[m-dv]);
+                    faces.push_back(buffer[m-du-dv]);
+                    faces.push_back(buffer[m-du]);
                 }
-                chunk->face_values.push_back(value);
+                rotate_uv.push_back(rotate);
+                values.push_back(value);
             }
         }
     }
-}
 
-void ChameleonGrid::remesh() {
-    mesh_instance = (MeshInstance3D*)get_child(get_child_count()-1);
     // TODO: REFACTORING
     Ref<ArrayMesh> mesh;
     std::vector<SurfaceTool> st;
@@ -255,22 +268,20 @@ void ChameleonGrid::remesh() {
     for (int i = 0; i < st.size(); i++)
         st[i].begin(Mesh::PRIMITIVE_TRIANGLES);
 
-    for (ChameleonChunk & chunk : chunks) {
-        for (int i = 0; i < chunk.face_values.size(); i++) {
-            ChameleonVoxel * voxel = &voxels[chunk.face_values[i]];
-            int mat = voxel->material;
-            int shade = voxel->smooth_shading;
-            stn[mat] += 1;
-            for (int k = 0; k < 6; k++) {
-                int v = chunk.faces[i*4+QUAD_TO_TRIGS[k]];
-                if (shade)
-                    st[mat].set_smooth_group(0);
-                else
-                    st[mat].set_smooth_group(-1);
-                st[mat].set_uv(Vector2(CUBE_UV[k*2], CUBE_UV[k*2+1]));
-                Vector3 offset = Vector3(chunk.index[X]*(chunk_size[X]-2), chunk.index[Y]*(chunk_size[Y]-2), chunk.index[Z]*(chunk_size[Z]-2));
-                st[mat].add_vertex(chunk.vertices[v]+offset);
-            }
+    for (int i = 0; i < values.size(); i++) {
+        ChameleonVoxel * voxel = &voxels[values[i]];
+        int mat = voxel->material;
+        int shade = voxel->smooth_shading;
+        stn[mat] += 1;
+        for (int k = 0; k < 6; k++) {
+            int v = faces[i*4+QUAD_TO_TRIGS[k]];
+            if (shade)
+                st[mat].set_smooth_group(0);
+            else
+                st[mat].set_smooth_group(-1);
+            st[mat].set_uv(Vector2(CUBE_UV[QUAD_TO_TRIGS[k]*2+rotate_uv[i]*8], CUBE_UV[QUAD_TO_TRIGS[k]*2+rotate_uv[i]*8+1]));
+            //st[mat].set_normal(chunk.normals[v]);
+            st[mat].add_vertex(vertices[v]);
         }
     }
 
@@ -284,14 +295,7 @@ void ChameleonGrid::remesh() {
             surface += 1;
         }
     }
-    mesh_instance->set_mesh(mesh);
-}
-
-void ChameleonGrid::update_chunk(int id) {
-   // Ignore unexisting chunks
-    if (id >= chunks.size() || chunks[id].rewrite)
-        return;
-    update_chunk_mesh_data(id);
+    chunks[chunk_id].mesh_instance->set_mesh(mesh);
 }
 
 int ChameleonGrid::get_voxel(Vector3i position) {

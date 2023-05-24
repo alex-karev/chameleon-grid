@@ -44,7 +44,7 @@ public:
     //! Get Vector3i index of a chunk
     Vector3i get_chunk_index(int id);
     //! Update mesh of a chunk
-    void update_chunk(int id);
+    void update_chunk(int chunk_id);
     //! Get voxel by global position. Returns -1 if chunk is not loaded
     int get_voxel(Vector3i position);
     //! Set voxel by global position. Does nothing if chunk is not loaded
@@ -63,16 +63,8 @@ public:
     //! Add new voxel type
     void add_voxel(int material, TypedArray<int> atlas_index, double smoothness, bool smooth_shading);
 
-    //! Redraw mesh
-    void remesh();
 
 private:
-    // Mesh instance to store mesh
-    MeshInstance3D * mesh_instance;
-
-    // Generate mesh using surface nets
-    void update_chunk_mesh_data(int chunk_id);
-
     // Material structure
     struct ChameleonMaterial {
         Ref<Material> material;
@@ -96,9 +88,7 @@ private:
         int index[3];
         std::vector<int> values;
         std::vector<int> mask;
-        std::vector<Vector3> vertices;
-        std::vector<int> faces;
-        std::vector<int> face_values;
+        MeshInstance3D * mesh_instance;
         int rewrite;
     };
 
@@ -154,9 +144,9 @@ private:
     // Remaps vertex indices from 1 quad into 2 trigs
     const int QUAD_TO_TRIGS[6] = {1,3,0,2,3,1};
     // UV map of triangles in one face
-    int CUBE_UV[12] = {
-        0,0, 1,0, 0,1, 
-        1,0, 1,1, 0,1
+    int CUBE_UV[16] = {
+        0,0, 1,0, 1,1, 0,1,
+        0,0, 0,1, 1,1, 1,0
     };
 };
 

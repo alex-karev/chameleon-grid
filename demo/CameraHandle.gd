@@ -34,4 +34,4 @@ func _process(delta):
 	if Input.is_key_pressed(KEY_S):
 		position += basis.z*delta*30
 		#rotate(basis.x, delta * key_control_speed)
-		
+	

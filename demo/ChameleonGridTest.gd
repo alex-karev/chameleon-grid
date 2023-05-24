@@ -46,7 +46,6 @@ func generate():
 	generate_chunk(Vector3i(1,0,0))
 	generate_chunk(Vector3i(0,0,1))
 	generate_chunk(Vector3i(1,0,1))
-	remesh()
 
 func generate_chunk(chunk_index: Vector3i):
 	var chunk = add_chunk(chunk_index)
@@ -68,3 +67,4 @@ func generate_chunk(chunk_index: Vector3i):
 func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		generate()
+
