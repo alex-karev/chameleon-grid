@@ -212,6 +212,24 @@ void ChameleonGrid::update_chunk(int chunk_id) {
             // Add vertex to buffer, store pointer to vertex index in buffer
             buffer[m] = vertices.size();
             vertices.push_back(v);
+            // Calculate normal
+            int d[8] = {
+                grid[0] >= 0 ? -1 : 0,
+                grid[1] >= 0 ? -1 : 0,
+                grid[2] >= 0 ? -1 : 0,
+                grid[3] >= 0 ? -1 : 0,
+                grid[4] >= 0 ? -1 : 0,
+                grid[5] >= 0 ? -1 : 0,
+                grid[6] >= 0 ? -1 : 0,
+                grid[7] >= 0 ? -1 : 0
+            };
+            Vector3 normal;
+            normal = Vector3(
+                (d[7]-d[6]) + (d[5]-d[4]) + (d[3]-d[2]) + (d[1]-d[0]),
+                (d[7]-d[5]) + (d[6]-d[4]) + (d[3]-d[1]) + (d[2]-d[0]),
+                (d[7]-d[3]) + (d[6]-d[2]) + (d[5]-d[1]) + (d[4]-d[0])
+            );
+            normals.push_back(normal.normalized());
             // Skipt the first row
             if (x==0 || y==0 || z==0)
                 continue;
@@ -275,12 +293,8 @@ void ChameleonGrid::update_chunk(int chunk_id) {
         stn[mat] += 1;
         for (int k = 0; k < 6; k++) {
             int v = faces[i*4+QUAD_TO_TRIGS[k]];
-            if (shade)
-                st[mat].set_smooth_group(0);
-            else
-                st[mat].set_smooth_group(-1);
+            st[mat].set_normal(normals[v]);
             st[mat].set_uv(Vector2(CUBE_UV[QUAD_TO_TRIGS[k]*2+rotate_uv[i]*8], CUBE_UV[QUAD_TO_TRIGS[k]*2+rotate_uv[i]*8+1]));
-            //st[mat].set_normal(chunk.normals[v]);
             st[mat].add_vertex(vertices[v]);
         }
     }
@@ -288,7 +302,6 @@ void ChameleonGrid::update_chunk(int chunk_id) {
     int surface = 0;
     for(int i = 0; i < st.size(); i++) {
         if (stn[i] > 0) {
-            st[i].generate_normals();
             st[i].index();
             mesh = st[i].commit(mesh);
             mesh->surface_set_material(surface, materials[i].material);

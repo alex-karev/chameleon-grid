@@ -6,7 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://246h4xw8ww4a" path="res://Texture2.png" id="3_v10pm"]
 [ext_resource type="Texture2D" uid="uid://eiknncwbpfyq" path="res://Texture3.png" id="4_1aafj"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d18rj"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8unov"]
 albedo_texture = ExtResource("2_46ij1")
 texture_filter = 0
 
@@ -14,7 +14,7 @@ texture_filter = 0
 albedo_texture = ExtResource("3_v10pm")
 texture_filter = 0
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8unov"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mro26"]
 albedo_texture = ExtResource("4_1aafj")
 texture_filter = 0
 
@@ -36,9 +36,9 @@ ambient_light_source = 3
 [node name="ChameleonGrid" type="ChameleonGrid" parent="."]
 chunk_size = Vector3i(15, 50, 15)
 script = ExtResource("1_dqbnw")
-grass_material = SubResource("StandardMaterial3D_d18rj")
+grass_material = SubResource("StandardMaterial3D_8unov")
 wall_material = SubResource("StandardMaterial3D_qagog")
-dirt_material = SubResource("StandardMaterial3D_8unov")
+dirt_material = SubResource("StandardMaterial3D_mro26")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="ChameleonGrid"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
@@ -48,7 +48,7 @@ mesh = SubResource("SphereMesh_u3uxm")
 environment = SubResource("Environment_wslxk")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.787452, -0.490774, 0.372909, 0, 0.605002, 0.796224, -0.616376, -0.626988, 0.47641, 0, 0, 0)
+transform = Transform3D(0.819152, -0.40558, 0.40558, 0, 0.707107, 0.707107, -0.573576, -0.579228, 0.579228, 0, 0, 0)
 shadow_enabled = true
 
 [node name="CameraHandle" type="Node3D" parent="."]
