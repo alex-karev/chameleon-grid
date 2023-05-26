@@ -129,6 +129,7 @@ void ChameleonGrid::update_chunk(int chunk_id) {
     std::vector<int> faces;
     std::vector<int> values;
     std::vector<Vector3> normals;
+    std::vector<Vector3> face_normals;
     std::vector<int> rotate_uv;
     int n = 0;
     int R[3] = {1, chunk_size[X]+1, (chunk_size[X]+1)*(chunk_size[Y]+1)};
@@ -136,7 +137,6 @@ void ChameleonGrid::update_chunk(int chunk_id) {
     int buf_no = 1;
     Vector3 pos = Vector3(0,0,0);
 	double smoothness = DEFAULT_VOXEL.smoothness;
-    Vector3 face_normals[6];
 
     // Internal buffer
     std::vector<int> buffer;
@@ -207,21 +207,16 @@ void ChameleonGrid::update_chunk(int chunk_id) {
                         v[j] += a ? 0.5 : -0.5;
                 }
             }
-            // Now we just average the edge intersections and add them to coordinate
-            v = pos + v * (1.0 / e_count) * smoothness;
-            // Add vertex to buffer, store pointer to vertex index in buffer
-            buffer[m] = vertices.size();
-            vertices.push_back(v);
             // Calculate normal
-            int d[8] = {
-                grid[0] >= 0 ? -1 : 0,
-                grid[1] >= 0 ? -1 : 0,
-                grid[2] >= 0 ? -1 : 0,
-                grid[3] >= 0 ? -1 : 0,
-                grid[4] >= 0 ? -1 : 0,
-                grid[5] >= 0 ? -1 : 0,
-                grid[6] >= 0 ? -1 : 0,
-                grid[7] >= 0 ? -1 : 0
+            double d[8] = {
+                grid[0] >= 0 ? -smoothness : 1.0 - smoothness,
+                grid[1] >= 0 ? -smoothness : 1.0 - smoothness,
+                grid[2] >= 0 ? -smoothness : 1.0 - smoothness,
+                grid[3] >= 0 ? -smoothness : 1.0 - smoothness,
+                grid[4] >= 0 ? -smoothness : 1.0 - smoothness,
+                grid[5] >= 0 ? -smoothness : 1.0 - smoothness,
+                grid[6] >= 0 ? -smoothness : 1.0 - smoothness,
+                grid[7] >= 0 ? -smoothness : 1.0 - smoothness
             };
             Vector3 normal;
             normal = Vector3(
@@ -230,6 +225,11 @@ void ChameleonGrid::update_chunk(int chunk_id) {
                 (d[7]-d[3]) + (d[6]-d[2]) + (d[5]-d[1]) + (d[4]-d[0])
             );
             normals.push_back(normal.normalized());
+            // Now we just average the edge intersections and add them to coordinate
+            v = pos + v * (1.0 / e_count) * smoothness;
+            // Add vertex to buffer, store pointer to vertex index in buffer
+            buffer[m] = vertices.size();
+            vertices.push_back(v);
             // Skipt the first row
             if (x==0 || y==0 || z==0)
                 continue;
@@ -252,24 +252,34 @@ void ChameleonGrid::update_chunk(int chunk_id) {
                 // TODO: REFACTORING
                 // Remember to flip orientation depending on the sign of the corner.
                 int value = 0;
+                int face[4];
                 if (mask & 1) {
                     if (i == 0) value = grid[1];
                     else if (i==1) value = grid[2];
                     else value = grid[4];
                     if (i == 0) rotate = 1;
-                    faces.push_back(buffer[m]);
-                    faces.push_back(buffer[m-du]);
-                    faces.push_back(buffer[m-du-dv]);
-                    faces.push_back(buffer[m-dv]);
+                    face[0] = buffer[m];
+                    face[1] = buffer[m-du];
+                    face[2] = buffer[m-du-dv];
+                    face[3] = buffer[m-dv];
                 }
                 else {
                     value = grid[0];
                     if (i == 2) rotate = 1;
                     else if (i == 1) rotate = 1;
-                    faces.push_back(buffer[m]);
-                    faces.push_back(buffer[m-dv]);
-                    faces.push_back(buffer[m-du-dv]);
-                    faces.push_back(buffer[m-du]);
+                    face[0] = buffer[m];
+                    face[1] = buffer[m-dv];
+                    face[2] = buffer[m-du-dv];
+                    face[3] = buffer[m-du];
+                }
+                for (int j = 0; j< 4; j++) {
+                    faces.push_back(face[j]);
+                }
+                for (int j = 0; j< 2; j++) {
+                    Vector3 c = vertices[face[QUAD_TO_TRIGS[j*3]]];
+                    Vector3 b = vertices[face[QUAD_TO_TRIGS[j*3+1]]];
+                    Vector3 a = vertices[face[QUAD_TO_TRIGS[j*3+2]]];
+                    face_normals.push_back((b-a).cross(c-a).normalized());
                 }
                 rotate_uv.push_back(rotate);
                 values.push_back(value);
@@ -293,7 +303,11 @@ void ChameleonGrid::update_chunk(int chunk_id) {
         stn[mat] += 1;
         for (int k = 0; k < 6; k++) {
             int v = faces[i*4+QUAD_TO_TRIGS[k]];
-            st[mat].set_normal(normals[v]);
+            if (shade)
+                st[mat].set_normal(normals[v]);
+            else
+                st[mat].set_normal(face_normals[i % 2 == 0 ? i*2 : i*2+1]);
+            
             st[mat].set_uv(Vector2(CUBE_UV[QUAD_TO_TRIGS[k]*2+rotate_uv[i]*8], CUBE_UV[QUAD_TO_TRIGS[k]*2+rotate_uv[i]*8+1]));
             st[mat].add_vertex(vertices[v]);
         }
